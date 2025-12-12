@@ -9,33 +9,80 @@ const STATE = {
 };
 
 // Storage Utilities
-const DB_KEY = 'AssetManagerData_v1';
+const API_URL = 'http://localhost:8000/api/data';
+const STORAGE_KEY = 'AssetManagerData_v2';
 
-function saveState() {
-    localStorage.setItem(DB_KEY, JSON.stringify({
+async function saveState() {
+    const data = {
         assets: STATE.assets,
         transactions: STATE.transactions,
         cash: STATE.cash,
         usdRate: STATE.usdRate,
         displayCurrency: STATE.displayCurrency
-    }));
+    };
+
+    // Always save to localStorage as backup
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+    // Try to save to server if available
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            console.warn('Servidor não disponível, dados salvos apenas no navegador');
+        } else {
+            console.log('Dados salvos no servidor e no navegador');
+        }
+    } catch (error) {
+        console.warn('Servidor não disponível, dados salvos apenas no navegador:', error.message);
+    }
 }
 
-function loadState() {
-    const data = localStorage.getItem(DB_KEY);
-    if (data) {
-        const parsed = JSON.parse(data);
+async function loadState() {
+    // Try to load from server first
+    try {
+        const response = await fetch(API_URL);
+        if (response.ok) {
+            const data = await response.json();
+            // If empty object returned (first run), fallback to localStorage or empty
+            if (Object.keys(data).length > 0) {
+                STATE.assets = data.assets || [];
+                STATE.transactions = data.transactions || [];
+                STATE.cash = data.cash || 0;
+                STATE.usdRate = data.usdRate || 5.00;
+                STATE.displayCurrency = data.displayCurrency || 'BRL';
+                console.log('Dados carregados do servidor (SAVE/data.json)');
+                return true; // Loaded from server
+            }
+        }
+    } catch (error) {
+        console.warn('Servidor não disponível, carregando do navegador');
+    }
+
+    // Fallback to localStorage
+    const localData = localStorage.getItem(STORAGE_KEY);
+    if (localData) {
+        const parsed = JSON.parse(localData);
         STATE.assets = parsed.assets || [];
         STATE.transactions = parsed.transactions || [];
         STATE.cash = parsed.cash || 0;
         STATE.usdRate = parsed.usdRate || 5.00;
         STATE.displayCurrency = parsed.displayCurrency || 'BRL';
+        console.log('Dados carregados do navegador');
+        return false; // Loaded from localStorage
     }
+    return false;
 }
 
 // Initialization
-document.addEventListener('DOMContentLoaded', () => {
-    loadState();
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadState();
     initRouter();
     initModals();
     initForms();
@@ -95,6 +142,37 @@ function initModals() {
         openModal('modal-cash');
         document.querySelector('input[name="cash_balance"]').value = STATE.cash;
     });
+
+    // Manual Save Button
+    document.getElementById('btn-save-data').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-save-data');
+        const originalHTML = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+
+        await saveState();
+
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Salvo!';
+        btn.style.backgroundColor = 'var(--success)';
+
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.style.backgroundColor = '';
+            btn.disabled = false;
+        }, 2000);
+    });
+
+    // Excel Export Button
+    document.getElementById('btn-export-excel').addEventListener('click', exportToExcel);
+
+    // Excel Import Button
+    document.getElementById('btn-import-excel').addEventListener('click', () => {
+        document.getElementById('import-file-input').click();
+    });
+
+    // Handle File Selection
+    document.getElementById('import-file-input').addEventListener('change', handleFileImport);
 
     // Currency Selector
     const currencySelector = document.getElementById('currency-selector');
@@ -227,6 +305,22 @@ function initForms() {
             priceLabel.textContent = `Preço Atual (${symbol}) - Inicial`;
         });
     }
+
+    // Update transaction price label based on selected asset
+    const transactionAssetSelect = document.getElementById('transaction-asset-select');
+    if (transactionAssetSelect) {
+        transactionAssetSelect.addEventListener('change', (e) => {
+            const assetId = e.target.value;
+            const asset = STATE.assets.find(a => a.id === assetId);
+            if (asset) {
+                const symbol = asset.currency === 'USD' ? '$' : 'R$';
+                const priceLabel = document.getElementById('transaction-price-label');
+                if (priceLabel) {
+                    priceLabel.textContent = `Preço Unitário (${symbol})`;
+                }
+            }
+        });
+    }
 }
 
 // Calculation Logic
@@ -329,6 +423,220 @@ function convertToDisplayCurrency(value, originalCurrency) {
         return convertToUSD(value, originalCurrency);
     }
     return value;
+}
+
+// Export to Excel (CSV)
+function exportToExcel() {
+    // 1. Export Assets
+    const assetsHeader = ['ID', 'Simbolo', 'Nome', 'Tipo', 'Moeda', 'Preço Atual'];
+    const assetsRows = STATE.assets.map(a => [
+        a.id,
+        a.symbol,
+        a.name,
+        a.type,
+        a.currency,
+        a.currentPrice
+    ]);
+    downloadCSV('meus_ativos.csv', assetsHeader, assetsRows);
+
+    // 2. Export Transactions
+    // Delay second download slightly to ensure browser handles both
+    setTimeout(() => {
+        const transHeader = ['ID', 'Data', 'Ativo ID', 'Tipo', 'Quantidade', 'Preço Unit.', 'Total'];
+        const sortedTrans = [...STATE.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const transRows = sortedTrans.map(t => {
+            return [
+                t.id,
+                t.date,
+                t.assetId,
+                t.type,
+                t.quantity,
+                t.price,
+                t.total
+            ];
+        });
+        downloadCSV('historico_transacoes.csv', transHeader, transRows);
+    }, 500);
+}
+
+
+
+// Import from Excel (CSV)
+function handleFileImport(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const content = e.target.result;
+            processCSVImport(content);
+        };
+        reader.readAsText(file);
+    });
+
+    // Clear input so same file can be selected again if needed
+    event.target.value = '';
+}
+
+function processCSVImport(csvContent) {
+    // Remove BOM if present
+    if (csvContent.charCodeAt(0) === 0xFEFF) {
+        csvContent = csvContent.slice(1);
+    }
+
+    const lines = csvContent.split('\n').map(line => line.trim()).filter(line => line);
+    if (lines.length < 2) {
+        alert("O arquivo parece vazio ou sem cabeçalho.");
+        return;
+    }
+
+    // Detect delimiter
+    const firstLine = lines[0];
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const delimiter = semicolonCount >= commaCount ? ';' : ',';
+
+    const header = firstLine.split(delimiter).map(h => h.trim());
+
+    // Identify type based on header columns
+    // Assets Header: 'ID', 'Simbolo', 'Nome', 'Tipo', 'Moeda', 'Preço Atual'
+    // Transactions Header: 'ID', 'Data', 'Ativo ID', 'Tipo', 'Quantidade', 'Preço Unit.', 'Total'
+
+    if (header.includes('Simbolo') && header.includes('Moeda')) {
+        importAssets(lines.slice(1), delimiter);
+    } else if (header.includes('Ativo ID') && header.includes('Quantidade')) {
+        importTransactions(lines.slice(1), delimiter);
+    } else {
+        alert('Formato de arquivo não reconhecido. Verifique se o cabeçalho está correto (Simbolo, Moeda, etc).');
+    }
+}
+
+
+// Helper for parsing numbers based on locale/delimiter
+function parseLocaleNumber(stringNumber, delimiter) {
+    if (!stringNumber) return 0;
+
+    // If delimiter is semicolon ';', assume PT-BR format (1.000,00)
+    // But be careful: some files use ; delimiter but US number format (1.59)
+    if (delimiter === ';') {
+        // If it includes a comma, it's likely PT-BR (1.000,00) or just (1,50)
+        if (stringNumber.includes(',')) {
+            const clean = stringNumber.replace(/\./g, '').replace(',', '.');
+            return parseFloat(clean);
+        }
+        // If no comma, but has dot (1.59), treat as standard float
+        // This fixes the issue where 1.59 becomes 159
+        return parseFloat(stringNumber);
+    }
+
+    // If delimiter is comma ',', assume US format (1,000.00) or simple float
+    // Remove commas (thousands), keep dot
+    const clean = stringNumber.replace(/,/g, '');
+    return parseFloat(clean);
+}
+
+function importAssets(rows, delimiter) {
+    let count = 0;
+    rows.forEach(row => {
+        const cols = row.split(delimiter);
+        if (cols.length < 6) return;
+
+        // ['ID', 'Simbolo', 'Nome', 'Tipo', 'Moeda', 'Preço Atual']
+        let id = cols[0].trim();
+        // Generate ID if missing (allows adding via Excel)
+        if (!id) {
+            id = crypto.randomUUID();
+        }
+
+        const price = parseLocaleNumber(cols[5], delimiter);
+
+        const asset = {
+            id: id,
+            symbol: cols[1].toUpperCase().trim(),
+            name: cols[2].trim(),
+            type: cols[3].trim(),
+            currency: cols[4].trim(),
+            currentPrice: price,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!asset.symbol) return; // Skip empty rows
+
+        // Update or Add
+        const existingIndex = STATE.assets.findIndex(a => a.id === asset.id);
+        if (existingIndex >= 0) {
+            STATE.assets[existingIndex] = asset;
+        } else {
+            STATE.assets.push(asset);
+        }
+        count++;
+    });
+
+    saveState();
+    renderAll();
+    alert(`${count} Ativos importados/atualizados com sucesso!`);
+}
+
+function importTransactions(rows, delimiter) {
+    let count = 0;
+    rows.forEach(row => {
+        const cols = row.split(delimiter);
+        if (cols.length < 7) return;
+
+        // ['ID', 'Data', 'Ativo ID', 'Tipo', 'Quantidade', 'Preço Unit.', 'Total']
+        let id = cols[0].trim();
+        if (!id) id = crypto.randomUUID();
+
+        const quantity = parseLocaleNumber(cols[4], delimiter);
+        const price = parseLocaleNumber(cols[5], delimiter);
+        const total = parseLocaleNumber(cols[6], delimiter);
+
+        const trans = {
+            id: id,
+            date: cols[1].trim(),
+            assetId: cols[2].trim(),
+            type: cols[3].trim(),
+            quantity: quantity,
+            price: price,
+            total: total
+        };
+
+        if (!trans.assetId) return;
+
+        // Update or Add
+        const existingIndex = STATE.transactions.findIndex(t => t.id === trans.id);
+        if (existingIndex >= 0) {
+            STATE.transactions[existingIndex] = trans;
+        } else {
+            STATE.transactions.push(trans);
+        }
+        count++;
+    });
+
+    saveState();
+    renderAll();
+    alert(`${count} Transações importadas/atualizadas com sucesso!`);
+}
+
+function downloadCSV(filename, headers, rows) {
+    const csvContent = [
+        headers.join(';'), // Excel in some regions prefers semicolon
+        ...rows.map(e => e.join(';'))
+    ].join('\n');
+
+    // Add BOM for Excel UTF-8 recognition
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 }
 
 // Rendering
@@ -578,9 +886,10 @@ function renderPriceUpdateForm() {
     STATE.assets.forEach(asset => {
         const item = document.createElement('div');
         item.className = 'form-group';
+        const currencySymbol = getCurrencySymbol(asset.currency || 'BRL');
         item.innerHTML = `
-            <label>${asset.symbol} - ${asset.name}</label>
-            <input type="number" name="price_${asset.id}" step="0.01" value="${asset.currentPrice}">
+            <label>${asset.symbol} - ${asset.name} (${currencySymbol})</label>
+            <input type="number" name="price_${asset.id}" step="0.01" value="${asset.currentPrice}" placeholder="Digite o preço em ${currencySymbol}">
         `;
         container.appendChild(item);
     });

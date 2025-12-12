@@ -47,6 +47,21 @@
                         <option value="BRL">Visualizar em R$ (BRL)</option>
                         <option value="USD">Visualizar em $ (USD)</option>
                     </select>
+                    <!-- Hidden input for file upload -->
+                    <input type="file" id="import-file-input" accept=".csv" multiple style="display: none;" />
+
+                    <button id="btn-import-excel" class="btn btn-secondary">
+                        <i class="fa-solid fa-file-import"></i> Importar (Excel)
+                    </button>
+                    <button id="btn-export-excel" class="btn btn-secondary">
+                        <i class="fa-solid fa-file-excel"></i> Exportar (Excel)
+                    </button>
+                    <button id="btn-load-data" class="btn btn-secondary">
+                        <i class="fa-solid fa-folder-open"></i> Carregar
+                    </button>
+                    <button id="btn-save-data" class="btn btn-secondary">
+                        <i class="fa-solid fa-floppy-disk"></i> Salvar
+                    </button>
                     <button id="btn-update-prices" class="btn btn-secondary">
                         <i class="fa-solid fa-rotate"></i> Atualizar Preços
                     </button>
@@ -254,8 +269,9 @@
                         <input type="number" name="quantity" step="any" required placeholder="0.00">
                     </div>
                     <div class="form-group">
-                        <label>Preço Unitário (R$)</label>
-                        <input type="number" name="price" step="0.01" required placeholder="0.00">
+                        <label for="transaction-price" id="transaction-price-label">Preço Unitário (R$)</label>
+                        <input type="number" id="transaction-price" name="price" step="0.01" required
+                            placeholder="0.00">
                     </div>
                 </div>
                 <div class="form-group">
