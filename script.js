@@ -3,8 +3,8 @@ const STATE = {
     assets: [],
     transactions: [],
     cash: 0,
-    usdRate: 5.00, // Taxa de câmbio USD/BRL (fixa)
-    displayCurrency: 'BRL', // Moeda de visualização: 'BRL' ou 'USD'
+    usdRate: 1.00, // No longer used for conversion basically, keeping for compatibility
+    displayCurrency: 'USD', // Always USD
     currentView: 'dashboard'
 };
 
@@ -18,7 +18,7 @@ async function saveState() {
         transactions: STATE.transactions,
         cash: STATE.cash,
         usdRate: STATE.usdRate,
-        displayCurrency: STATE.displayCurrency
+        displayCurrency: 'USD' // Force USD
     };
 
     // Always save to localStorage as backup
@@ -55,8 +55,8 @@ async function loadState() {
                 STATE.assets = data.assets || [];
                 STATE.transactions = data.transactions || [];
                 STATE.cash = data.cash || 0;
-                STATE.usdRate = data.usdRate || 5.00;
-                STATE.displayCurrency = data.displayCurrency || 'BRL';
+                STATE.usdRate = data.usdRate || 1.00;
+                STATE.displayCurrency = 'USD'; // Force Load as USD
                 console.log('Dados carregados do servidor (SAVE/data.json)');
                 return true; // Loaded from server
             }
@@ -72,8 +72,8 @@ async function loadState() {
         STATE.assets = parsed.assets || [];
         STATE.transactions = parsed.transactions || [];
         STATE.cash = parsed.cash || 0;
-        STATE.usdRate = parsed.usdRate || 5.00;
-        STATE.displayCurrency = parsed.displayCurrency || 'BRL';
+        STATE.usdRate = parsed.usdRate || 1.00;
+        STATE.displayCurrency = 'USD'; // Force Load as USD
         console.log('Dados carregados do navegador');
         return false; // Loaded from localStorage
     }
@@ -174,16 +174,7 @@ function initModals() {
     // Handle File Selection
     document.getElementById('import-file-input').addEventListener('change', handleFileImport);
 
-    // Currency Selector
-    const currencySelector = document.getElementById('currency-selector');
-    if (currencySelector) {
-        currencySelector.value = STATE.displayCurrency;
-        currencySelector.addEventListener('change', (e) => {
-            STATE.displayCurrency = e.target.value;
-            saveState();
-            renderAll();
-        });
-    }
+    // Currency Selector REMOVED
 
     // Close Triggers
     document.querySelectorAll('.close-modal').forEach(btn => {
@@ -225,7 +216,7 @@ function initForms() {
             symbol: formData.get('symbol').toUpperCase(),
             name: formData.get('name'),
             type: formData.get('type'),
-            currency: formData.get('currency') || 'BRL',
+            currency: 'USD', // FORCE USD
             currentPrice: parseFloat(formData.get('current_price')),
             createdAt: new Date().toISOString()
         };
@@ -296,15 +287,7 @@ function initForms() {
         renderAll();
     });
 
-    // Currency selection change - update price label
-    const currencySelect = document.getElementById('asset-currency-select');
-    if (currencySelect) {
-        currencySelect.addEventListener('change', (e) => {
-            const priceLabel = document.getElementById('price-label');
-            const symbol = e.target.value === 'USD' ? '$' : 'R$';
-            priceLabel.textContent = `Preço Atual (${symbol}) - Inicial`;
-        });
-    }
+    // Currency selection change - REMOVED
 
     // Update transaction price label based on selected asset
     const transactionAssetSelect = document.getElementById('transaction-asset-select');
@@ -313,7 +296,7 @@ function initForms() {
             const assetId = e.target.value;
             const asset = STATE.assets.find(a => a.id === assetId);
             if (asset) {
-                const symbol = asset.currency === 'USD' ? '$' : 'R$';
+                const symbol = '$'; // Always Dollar
                 const priceLabel = document.getElementById('transaction-price-label');
                 if (priceLabel) {
                     priceLabel.textContent = `Preço Unitário (${symbol})`;
@@ -363,8 +346,8 @@ function getPortfolioStats() {
         const holding = getAssetHolding(asset.id);
         if (holding.quantity > 0) {
             const currentValue = holding.quantity * asset.currentPrice;
-            const currentValueDisplay = convertToDisplayCurrency(currentValue, asset.currency);
-            const totalCostDisplay = convertToDisplayCurrency(holding.totalCost, asset.currency);
+            const currentValueDisplay = currentValue; // Always USD
+            const totalCostDisplay = holding.totalCost; // Always USD
 
             totalInvested += totalCostDisplay;
             totalValue += currentValueDisplay;
@@ -381,7 +364,7 @@ function getPortfolioStats() {
     });
 
     const totalAssetsValue = totalValue; // Value of assets in display currency
-    const cashDisplay = convertToDisplayCurrency(STATE.cash, 'BRL'); // Cash is always in BRL
+    const cashDisplay = STATE.cash; // Cash is now always USD per user request
     const totalNetWorth = totalAssetsValue + cashDisplay;
 
     const totalProfit = totalValue - totalInvested;
@@ -390,39 +373,25 @@ function getPortfolioStats() {
     return { totalInvested, totalAssetsValue, totalNetWorth, totalProfit, totalProfitPercent, assetsData, cashDisplay };
 }
 
-function formatCurrency(val, currency = 'BRL') {
-    if (currency === 'USD') {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
-    }
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+function formatCurrency(val, currency = 'USD') {
+    // Always format as USD
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 }
 
 function getCurrencySymbol(currency) {
-    return currency === 'USD' ? '$' : 'R$';
+    return '$';
 }
 
 function convertToBRL(value, currency) {
-    if (currency === 'USD') {
-        return value * STATE.usdRate;
-    }
-    return value;
+    return value; // No conversion
 }
 
 function convertToUSD(value, currency) {
-    if (currency === 'BRL') {
-        return value / STATE.usdRate;
-    }
-    return value;
+    return value; // No conversion
 }
 
 function convertToDisplayCurrency(value, originalCurrency) {
-    // Converte valor da moeda original para a moeda de visualização
-    if (STATE.displayCurrency === 'BRL') {
-        return convertToBRL(value, originalCurrency);
-    } else if (STATE.displayCurrency === 'USD') {
-        return convertToUSD(value, originalCurrency);
-    }
-    return value;
+    return value; // Assume everything is USD now
 }
 
 // Export to Excel (CSV)
