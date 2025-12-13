@@ -3,6 +3,8 @@ const STATE = {
     assets: [],
     transactions: [],
     cash: 0,
+    cashSource: 'manual', // 'manual' or 'asset'
+    cashAssetId: null,
     usdRate: 1.00, // No longer used for conversion basically, keeping for compatibility
     displayCurrency: 'USD', // Always USD
     currentView: 'dashboard'
@@ -17,6 +19,8 @@ async function saveState() {
         assets: STATE.assets,
         transactions: STATE.transactions,
         cash: STATE.cash,
+        cashSource: STATE.cashSource,
+        cashAssetId: STATE.cashAssetId,
         usdRate: STATE.usdRate,
         displayCurrency: 'USD' // Force USD
     };
@@ -33,6 +37,8 @@ async function loadState() {
         STATE.assets = parsed.assets || [];
         STATE.transactions = parsed.transactions || [];
         STATE.cash = parsed.cash || 0;
+        STATE.cashSource = parsed.cashSource || 'manual';
+        STATE.cashAssetId = parsed.cashAssetId || null;
         STATE.usdRate = parsed.usdRate || 1.00;
         STATE.displayCurrency = 'USD'; // Force Load as USD
         console.log('Dados carregados do navegador');
@@ -101,7 +107,32 @@ function initModals() {
     // Edit Cash
     document.getElementById('btn-edit-cash').addEventListener('click', () => {
         openModal('modal-cash');
+
+        // Load current state into modal
+        const manualRadio = document.querySelector('input[name="cash_source"][value="manual"]');
+        const assetRadio = document.querySelector('input[name="cash_source"][value="asset"]');
+
+        if (STATE.cashSource === 'asset') {
+            assetRadio.checked = true;
+        } else {
+            manualRadio.checked = true;
+        }
+
+        // Trigger change event to set UI state
+        manualRadio.dispatchEvent(new Event('change'));
+
         document.querySelector('input[name="cash_balance"]').value = STATE.cash;
+
+        // Populate Asset Select
+        const select = document.getElementById('cash-asset-select');
+        select.innerHTML = '<option value="">-- Selecione --</option>';
+        STATE.assets.forEach(asset => {
+            const option = document.createElement('option');
+            option.value = asset.id;
+            option.textContent = `${asset.symbol} - ${asset.name}`;
+            if (asset.id === STATE.cashAssetId) option.selected = true;
+            select.appendChild(option);
+        });
     });
 
 
@@ -223,10 +254,38 @@ function initForms() {
     document.getElementById('form-cash').addEventListener('submit', (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
-        STATE.cash = parseFloat(formData.get('cash_balance'));
+
+        STATE.cashSource = formData.get('cash_source');
+
+        if (STATE.cashSource === 'manual') {
+            STATE.cash = parseFloat(formData.get('cash_balance')) || 0;
+            STATE.cashAssetId = null;
+        } else {
+            STATE.cashAssetId = formData.get('cash_asset_id');
+            // Cash value receives asset value dynamically in getPortfolioStats
+        }
+
         saveState();
         closeModal();
         renderAll();
+    });
+
+    // Handle Cash Modal Radio Change
+    document.querySelectorAll('input[name="cash_source"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const manualInput = document.getElementById('cash-manual-input');
+            const assetInput = document.getElementById('cash-asset-select').parentElement;
+
+            if (e.target.value === 'manual') {
+                manualInput.classList.remove('hidden');
+                assetInput.classList.add('hidden');
+                document.getElementById('cash-asset-select').required = false;
+            } else {
+                manualInput.classList.add('hidden');
+                assetInput.classList.remove('hidden');
+                document.getElementById('cash-asset-select').required = true;
+            }
+        });
     });
 
     // Currency selection change - REMOVED
@@ -284,6 +343,14 @@ function getPortfolioStats() {
     let totalValue = 0;
     const assetsData = [];
 
+    // Calculate Cash Value first if it's based on an asset
+    let cashDisplay = STATE.cash;
+    if (STATE.cashSource === 'asset' && STATE.cashAssetId) {
+        // We calculate asset values first, so we need to find the specific asset data later
+        // or just calculate it now.
+        // Let's iterate assets normally, but flag the one used for cash.
+    }
+
     STATE.assets.forEach(asset => {
         const holding = getAssetHolding(asset.id);
         if (holding.quantity > 0) {
@@ -291,8 +358,16 @@ function getPortfolioStats() {
             const currentValueDisplay = currentValue; // Always USD
             const totalCostDisplay = holding.totalCost; // Always USD
 
-            totalInvested += totalCostDisplay;
-            totalValue += currentValueDisplay;
+            const isCashAsset = (STATE.cashSource === 'asset' && asset.id === STATE.cashAssetId);
+
+            if (isCashAsset) {
+                // If this is the cash asset, its value goes to Cash, NOT Invested
+                cashDisplay = currentValueDisplay;
+            } else {
+                // Regular investment
+                totalInvested += totalCostDisplay;
+                totalValue += currentValueDisplay;
+            }
 
             assetsData.push({
                 ...asset,
@@ -300,13 +375,14 @@ function getPortfolioStats() {
                 currentValue,
                 currentValueDisplay,
                 profit: currentValue - holding.totalCost,
-                profitPercent: holding.totalCost > 0 ? ((currentValue - holding.totalCost) / holding.totalCost) * 100 : 0
+                profitPercent: holding.totalCost > 0 ? ((currentValue - holding.totalCost) / holding.totalCost) * 100 : 0,
+                isCashAsset: isCashAsset
             });
         }
     });
 
-    const totalAssetsValue = totalValue; // Value of assets in display currency
-    const cashDisplay = STATE.cash; // Cash is now always USD per user request
+    const totalAssetsValue = totalValue; // Value of assets (excluding cash asset)
+    // cashDisplay is either manual STATE.cash or the asset's value
     const totalNetWorth = totalAssetsValue + cashDisplay;
 
     const totalProfit = totalValue - totalInvested;
@@ -589,7 +665,9 @@ function renderDashboard() {
         allocationItems.push({
             symbol: 'CAIXA',
             name: 'Saldo Disponível',
-            currentValue: STATE.cash,
+            symbol: 'CAIXA',
+            name: 'Saldo Disponível',
+            currentValue: stats.cashDisplay,
             isCash: true
         });
     }
@@ -608,7 +686,7 @@ function renderDashboard() {
         row.innerHTML = `
             <div class="alloc-label" title="${data.name}">${symbolDisplay}</div>
             <div class="alloc-bar-bg">
-                <div class="alloc-bar-fill" style="width: ${percentage}%; ${data.isCash ? 'background-color: var(--success);' : ''}"></div>
+                <div class="alloc-bar-fill" style="width: ${percentage}%; ${(data.isCash || data.isCashAsset) ? 'background-color: var(--success);' : ''}"></div>
             </div>
             <div class="alloc-val">${percentage.toFixed(1)}%</div>
         `;
@@ -654,12 +732,17 @@ function renderAssetsTable() {
         const profitClass = item.profit >= 0 ? 'text-success' : 'text-danger';
         const allocationPercent = stats.totalNetWorth > 0 ? (item.currentValueDisplay / stats.totalNetWorth) * 100 : 0;
 
+        // Add visual indicator if it's the Cash Asset
+        const rowStyle = item.isCashAsset ? 'background-color: rgba(46, 204, 113, 0.05);' : '';
+        const badge = item.isCashAsset ? '<span class="badge positive" style="margin-left:5px; font-size:0.7em">CAIXA</span>' : '';
+
+        tr.style = rowStyle;
         tr.innerHTML = `
             <td>
                 <div class="asset-icon-cell">
                     <div class="asset-avatar">${item.symbol[0]}</div>
                     <div>
-                        <div style="font-weight:600">${item.symbol}</div>
+                        <div style="font-weight:600">${item.symbol}${badge}</div>
                         <div style="font-size:0.8em; color:var(--text-muted)">${item.name}</div>
                     </div>
                 </div>
