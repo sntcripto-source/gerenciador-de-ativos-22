@@ -98,6 +98,25 @@ function initModals() {
         document.querySelector('input[name="date"]').valueAsDate = new Date();
     });
 
+    // Delete Asset from Transaction Modal
+    document.getElementById('btn-delete-asset-modal').addEventListener('click', () => {
+        const select = document.getElementById('transaction-asset-select');
+        const assetId = select.value;
+        if (!assetId) {
+            alert('Selecione um ativo para excluir.');
+            return;
+        }
+
+        // Use existing delete function
+        window.deleteAsset(assetId);
+
+        // Check if deletion occurred (user confirmed)
+        const stillExists = STATE.assets.find(a => a.id === assetId);
+        if (!stillExists) {
+            closeModal();
+        }
+    });
+
     document.getElementById('btn-add-asset').addEventListener('click', () => openModal('modal-asset'));
     document.getElementById('btn-update-prices').addEventListener('click', () => {
         openModal('modal-prices');
