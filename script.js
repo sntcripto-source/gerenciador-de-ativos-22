@@ -202,10 +202,18 @@ function initForms() {
     document.getElementById('form-asset').addEventListener('submit', (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
+        const symbol = formData.get('symbol').trim().toUpperCase();
+
+        // Check for duplicate symbol
+        const existingAsset = STATE.assets.find(a => a.symbol && a.symbol.trim().toUpperCase() === symbol);
+        if (existingAsset) {
+            const confirmDuplicate = confirm(`O ativo "${symbol}" (${existingAsset.name}) já está cadastrado. Deseja cadastrá-lo novamente?`);
+            if (!confirmDuplicate) return;
+        }
 
         const newAsset = {
             id: crypto.randomUUID(),
-            symbol: formData.get('symbol').toUpperCase(),
+            symbol: symbol,
             name: formData.get('name'),
             type: formData.get('type'),
             currency: 'USD', // FORCE USD
@@ -570,9 +578,15 @@ function importAssets(rows, delimiter) {
         if (!asset.symbol) return; // Skip empty rows
 
         // Update or Add
-        const existingIndex = STATE.assets.findIndex(a => a.id === asset.id);
-        if (existingIndex >= 0) {
-            STATE.assets[existingIndex] = asset;
+        const existingIndexById = STATE.assets.findIndex(a => a.id === asset.id);
+        const existingIndexBySymbol = STATE.assets.findIndex(a => a.symbol && a.symbol.trim().toUpperCase() === asset.symbol);
+
+        if (existingIndexById >= 0) {
+            STATE.assets[existingIndexById] = asset;
+        } else if (existingIndexBySymbol >= 0) {
+            // Already exists with this symbol but different ID
+            // We can choose to update it or ignore it. For now, let's update it to maintain current behavior of "update or add".
+            STATE.assets[existingIndexBySymbol] = asset;
         } else {
             STATE.assets.push(asset);
         }
