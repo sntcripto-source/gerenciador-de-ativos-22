@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeFi Control Manager</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS for Excel Import/Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-cube"></i> DeFi Manager
+            </div>
+            <div class="actions">
+                <input type="file" id="importFile" accept=".xlsx, .xls" style="display: none;">
+                <button id="importBtn" class="btn btn-secondary"><i class="fas fa-file-import"></i> Importar Excel</button>
+                <button id="exportBtn" class="btn btn-secondary"><i class="fas fa-file-export"></i> Exportar Excel</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Dashboard Cards -->
+            <section class="dashboard">
+                <div class="card total-invested">
+                    <h3>Total Investido</h3>
+                    <p class="amount" id="totalInvested">R$ 0,00</p>
+                </div>
+                <div class="card total-withdrawn">
+                    <h3>Total Sacado</h3>
+                    <p class="amount" id="totalWithdrawn">R$ 0,00</p>
+                </div>
+                <div class="card net-profit">
+                    <h3>Lucro Líquido</h3>
+                    <p class="amount" id="netProfit">R$ 0,00</p>
+                </div>
+            </section>
+
+            <div class="content-grid">
+                <!-- DeFi Pairs Section -->
+                <section class="panel pairs-panel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-coins"></i> Pares DeFi</h2>
+                        <button id="addPairBtn" class="btn btn-primary"><i class="fas fa-plus"></i> Novo Par</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Par</th>
+                                    <th>Investido</th>
+                                    <th>Data</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pairsTableBody">
+                                <!-- Pairs will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Daily Withdrawals Section -->
+                <section class="panel withdrawals-panel">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-hand-holding-usd"></i> Saques Diários</h2>
+                        <button id="addWithdrawalBtn" class="btn btn-primary"><i class="fas fa-plus"></i> Novo Saque</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Valor</th>
+                                    <th>Notas</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="withdrawalsTableBody">
+                                <!-- Withdrawals will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="pairModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Adicionar Par DeFi</h2>
+            <form id="pairForm">
+                <div class="form-group">
+                    <label>Nome do Par (ex: BTC/USDT)</label>
+                    <input type="text" id="pairName" required>
+                </div>
+                <div class="form-group">
+                    <label>Valor Investido (R$)</label>
+                    <input type="number" id="pairAmount" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Data</label>
+                    <input type="date" id="pairDate" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="withdrawalModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Registrar Saque Diário</h2>
+            <form id="withdrawalForm">
+                <div class="form-group">
+                    <label>Valor do Saque (R$)</label>
+                    <input type="number" id="withdrawalAmount" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Data</label>
+                    <input type="date" id="withdrawalDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Notas</label>
+                    <input type="text" id="withdrawalNotes">
+                </div>
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

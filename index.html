@@ -608,6 +608,10 @@
                     <i class="fa-solid fa-list-ul"></i>
                     <span>Transações</span>
                 </li>
+                <li data-tab="defi">
+                    <i class="fa-solid fa-cube"></i>
+                    <span>DeFi</span>
+                </li>
             </ul>
         </nav>
 
@@ -750,6 +754,85 @@
                                 <!-- JS -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DeFi View -->
+            <section id="view-defi" class="view">
+                <div class="stats-grid">
+                    <div class="stat-card total-invested">
+                        <div class="icon-wrapper"><i class="fa-solid fa-arrow-up-right-from-square"></i></div>
+                        <div class="stat-content">
+                            <h3>DeFi: Total Investido</h3>
+                            <p class="value" id="defi-total-invested">$ 0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card total-withdrawn">
+                        <div class="icon-wrapper"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                        <div class="stat-content">
+                            <h3>DeFi: Total Sacado</h3>
+                            <p class="value" id="defi-total-withdrawn">$ 0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card net-profit">
+                        <div class="icon-wrapper"><i class="fa-solid fa-chart-line"></i></div>
+                        <div class="stat-content">
+                            <h3>DeFi: Lucro Líquido</h3>
+                            <p class="value" id="defi-net-profit">$ 0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-split">
+                    <div class="card">
+                        <div class="panel-header"
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <h2 style="font-size:1.2rem;"><i class="fa-solid fa-coins"></i> Pares DeFi</h2>
+                            <button id="btn-add-defi-pair" class="btn btn-sm btn-primary"><i
+                                    class="fa-solid fa-plus"></i> Novo Par</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Par</th>
+                                        <th>Investido</th>
+                                        <th>Data</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="defi-pairs-table-body">
+                                    <!-- Pairs -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="panel-header"
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <h2 style="font-size:1.2rem;"><i class="fa-solid fa-hand-holding-dollar"></i> Saques Diários
+                            </h2>
+                            <button id="btn-add-defi-withdrawal" class="btn btn-sm btn-primary"><i
+                                    class="fa-solid fa-plus"></i> Novo Saque</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Par</th>
+                                        <th>Valor</th>
+                                        <th>Notas</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="defi-withdrawals-table-body">
+                                    <!-- Withdrawals -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -914,6 +997,61 @@
             </form>
         </div>
 
+        <!-- Add DeFi Pair Modal -->
+        <div id="modal-defi-pair" class="modal hidden">
+            <div class="modal-header">
+                <h2>Adicionar Par DeFi</h2>
+                <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-defi-pair">
+                <div class="form-group">
+                    <label>Nome do Par (ex: BTC/USDT)</label>
+                    <input type="text" name="pair_name" required placeholder="BTC/USDT">
+                </div>
+                <div class="form-group">
+                    <label>Valor Investido ($)</label>
+                    <input type="number" name="pair_amount" step="0.01" required placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Data</label>
+                    <input type="date" name="pair_date" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Salvar Par</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="modal-defi-withdrawal" class="modal hidden">
+            <div class="modal-header">
+                <h2>Registrar Saque DeFi</h2>
+                <button class="close-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="form-defi-withdrawal">
+                <div class="form-group">
+                    <label>Par DeFi</label>
+                    <select name="withdrawal_pair_id" id="withdrawal-pair-select" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Valor do Saque ($)</label>
+                    <input type="number" name="withdrawal_amount" step="0.01" required placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Data</label>
+                    <input type="date" name="withdrawal_date" required>
+                </div>
+                <div class="form-group">
+                    <label>Notas</label>
+                    <input type="text" name="withdrawal_notes">
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Salvar Saque</button>
+                </div>
+            </form>
+        </div>
+
     </div>
 
     <script>
@@ -921,6 +1059,8 @@
         const STATE = {
             assets: [],
             transactions: [],
+            defi_pairs: [],
+            defi_withdrawals: [],
             cash: 0,
             cashSource: 'manual', // 'manual' or 'asset'
             cashAssetId: null,
@@ -937,6 +1077,8 @@
             const data = {
                 assets: STATE.assets,
                 transactions: STATE.transactions,
+                defi_pairs: STATE.defi_pairs,
+                defi_withdrawals: STATE.defi_withdrawals,
                 cash: STATE.cash,
                 cashSource: STATE.cashSource,
                 cashAssetId: STATE.cashAssetId,
@@ -991,6 +1133,8 @@
             if (data) {
                 STATE.assets = data.assets || [];
                 STATE.transactions = data.transactions || [];
+                STATE.defi_pairs = data.defi_pairs || [];
+                STATE.defi_withdrawals = data.defi_withdrawals || [];
                 STATE.cash = data.cash || 0;
                 STATE.cashSource = data.cashSource || 'manual';
                 STATE.cashAssetId = data.cashAssetId || null;
@@ -1031,7 +1175,8 @@
                     const titleMap = {
                         'dashboard': 'Dashboard',
                         'assets': 'Meus Ativos',
-                        'transactions': 'Histórico de Transações'
+                        'transactions': 'Histórico de Transações',
+                        'defi': 'Gerenciador DeFi'
                     };
                     pageTitle.textContent = titleMap[targetId];
                     STATE.currentView = targetId;
@@ -1049,7 +1194,19 @@
                 openModal('modal-transaction');
                 populateAssetSelect();
                 // Set default date to today
-                document.querySelector('input[name="date"]').valueAsDate = new Date();
+                document.querySelector('#form-transaction input[name="date"]').valueAsDate = new Date();
+            });
+
+            // DeFi Modal Triggers
+            document.getElementById('btn-add-defi-pair').addEventListener('click', () => {
+                openModal('modal-defi-pair');
+                document.querySelector('#form-defi-pair input[name="pair_date"]').valueAsDate = new Date();
+            });
+
+            document.getElementById('btn-add-defi-withdrawal').addEventListener('click', () => {
+                openModal('modal-defi-withdrawal');
+                populateDeFiPairSelect();
+                document.querySelector('#form-defi-withdrawal input[name="withdrawal_date"]').valueAsDate = new Date();
             });
 
             // Delete Asset from Transaction Modal
@@ -1288,6 +1445,47 @@
                     }
                 });
             }
+
+            // DeFi Pair Form Submit
+            const formPair = document.getElementById('form-defi-pair');
+            if (formPair) {
+                formPair.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.target);
+                    const newPair = {
+                        id: Date.now(),
+                        name: formData.get('pair_name'),
+                        amount: parseFloat(formData.get('pair_amount')),
+                        date: formData.get('pair_date')
+                    };
+                    STATE.defi_pairs.push(newPair);
+                    saveState();
+                    closeModal();
+                    e.target.reset();
+                    renderAll();
+                });
+            }
+
+            // DeFi Withdrawal Form Submit
+            const formWithdrawal = document.getElementById('form-defi-withdrawal');
+            if (formWithdrawal) {
+                formWithdrawal.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.target);
+                    const newWithdrawal = {
+                        id: Date.now(),
+                        pair_id: formData.get('withdrawal_pair_id'),
+                        amount: parseFloat(formData.get('withdrawal_amount')),
+                        date: formData.get('withdrawal_date'),
+                        notes: formData.get('withdrawal_notes')
+                    };
+                    STATE.defi_withdrawals.push(newWithdrawal);
+                    saveState();
+                    closeModal();
+                    e.target.reset();
+                    renderAll();
+                });
+            }
         }
 
         // Calculation Logic
@@ -1366,12 +1564,18 @@
 
             const totalAssetsValue = totalValue; // Value of assets (excluding cash asset)
             // cashDisplay is either manual STATE.cash or the asset's value
-            const totalNetWorth = totalAssetsValue + cashDisplay;
 
-            const totalProfit = totalValue - totalInvested;
+            // DeFi Inclusion
+            const totalDeFiInvested = STATE.defi_pairs.reduce((sum, p) => sum + p.amount, 0);
+
+            const totalNetWorth = totalAssetsValue + cashDisplay + totalDeFiInvested;
+
+            const totalProfit = (totalValue + totalDeFiInvested) - (totalInvested + totalDeFiInvested); // Simplified for now
+            // Actually, let's just count DeFi Invested as both cost and value for total calculations, 
+            // since we don't have real-time price for DeFi pairs here yet.
             const totalProfitPercent = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
 
-            return { totalInvested, totalAssetsValue, totalNetWorth, totalProfit, totalProfitPercent, assetsData, cashDisplay };
+            return { totalInvested, totalAssetsValue, totalNetWorth, totalProfit, totalProfitPercent, assetsData, cashDisplay, totalDeFiInvested };
         }
 
         function formatCurrency(val, currency = 'USD') {
@@ -1620,13 +1824,78 @@
             renderDashboard();
             renderAssetsTable();
             renderTransactionsTable();
+            renderDeFi();
         }
+
+        function renderDeFi() {
+            const pairsTbody = document.getElementById('defi-pairs-table-body');
+            const withdrawalsTbody = document.getElementById('defi-withdrawals-table-body');
+
+            const totalInvested = STATE.defi_pairs.reduce((sum, p) => sum + p.amount, 0);
+            const totalWithdrawn = STATE.defi_withdrawals.reduce((sum, w) => sum + w.amount, 0);
+            const netProfit = totalWithdrawn - totalInvested;
+
+            document.getElementById('defi-total-invested').textContent = formatCurrency(totalInvested);
+            document.getElementById('defi-total-withdrawn').textContent = formatCurrency(totalWithdrawn);
+            const netProfitEl = document.getElementById('defi-net-profit');
+            netProfitEl.textContent = formatCurrency(netProfit);
+            netProfitEl.className = `value ${netProfit >= 0 ? 'text-success' : 'text-danger'}`;
+
+            pairsTbody.innerHTML = STATE.defi_pairs.map(pair => `
+                <tr>
+                    <td>${pair.name}</td>
+                    <td>${formatCurrency(pair.amount)}</td>
+                    <td>${new Date(pair.date).toLocaleDateString('pt-BR')}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline btn-danger-icon" onclick="deleteDeFiPair(${pair.id})">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            const sortedWithdrawals = [...STATE.defi_withdrawals].sort((a, b) => new Date(b.date) - new Date(a.date));
+            withdrawalsTbody.innerHTML = sortedWithdrawals.map(w => {
+                const pair = STATE.defi_pairs.find(p => p.id == w.pair_id);
+                const pairName = pair ? pair.name : '<span class="text-muted">Par Excluído</span>';
+
+                return `
+                <tr>
+                    <td>${new Date(w.date).toLocaleDateString('pt-BR')}</td>
+                    <td>${pairName}</td>
+                    <td>${formatCurrency(w.amount)}</td>
+                    <td>${w.notes || '-'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline btn-danger-icon" onclick="deleteDeFiWithdrawal(${w.id})">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            }).join('');
+        }
+
+        window.deleteDeFiPair = function (id) {
+            if (confirm('Tem certeza que deseja excluir este par DeFi?')) {
+                STATE.defi_pairs = STATE.defi_pairs.filter(p => p.id !== id);
+                saveState();
+                renderAll();
+            }
+        };
+
+        window.deleteDeFiWithdrawal = function (id) {
+            if (confirm('Tem certeza que deseja excluir este saque?')) {
+                STATE.defi_withdrawals = STATE.defi_withdrawals.filter(w => w.id !== id);
+                saveState();
+                renderAll();
+            }
+        };
 
         function renderDashboard() {
             const stats = getPortfolioStats();
 
             document.getElementById('dash-total-balance').textContent = formatCurrency(stats.totalNetWorth, STATE.displayCurrency);
-            document.getElementById('dash-invested').textContent = formatCurrency(stats.totalInvested, STATE.displayCurrency);
+            document.getElementById('dash-invested').textContent = formatCurrency(stats.totalInvested + stats.totalDeFiInvested, STATE.displayCurrency);
             document.getElementById('dash-cash').textContent = formatCurrency(stats.cashDisplay, STATE.displayCurrency);
 
             const profitEl = document.getElementById('dash-profit');
@@ -1661,6 +1930,16 @@
                 });
             }
 
+            // DeFi Inclusion in Allocation Chart
+            if (stats.totalDeFiInvested > 0) {
+                allocationItems.push({
+                    symbol: 'DeFi',
+                    name: 'Investimentos DeFi',
+                    currentValue: stats.totalDeFiInvested,
+                    isDeFi: true
+                });
+            }
+
             // Sort by value desc
             const sortedAllocation = allocationItems.sort((a, b) => b.currentValue - a.currentValue);
 
@@ -1675,7 +1954,7 @@
                 row.innerHTML = `
             <div class="alloc-label" title="${data.name}">${symbolDisplay}</div>
             <div class="alloc-bar-bg">
-                <div class="alloc-bar-fill" style="width: ${percentage}%; ${(data.isCash || data.isCashAsset) ? 'background-color: var(--success);' : ''}"></div>
+                <div class="alloc-bar-fill" style="width: ${percentage}%; ${(data.isCash || data.isCashAsset) ? 'background-color: var(--success);' : (data.isDeFi ? 'background-color: #f1c40f;' : '')}"></div>
             </div>
             <div class="alloc-val">${percentage.toFixed(1)}%</div>
         `;
@@ -1940,6 +2219,33 @@
                 saveState();
                 renderAll();
             }
+        }
+
+        function populateDeFiPairSelect() {
+            const select = document.getElementById('withdrawal-pair-select');
+            select.innerHTML = '';
+
+            if (STATE.defi_pairs.length === 0) {
+                const option = document.createElement('option');
+                option.value = "";
+                option.textContent = "Nenhum par cadastrado";
+                select.appendChild(option);
+                select.disabled = true;
+                return;
+            }
+
+            select.disabled = false;
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.textContent = "Selecione um par...";
+            select.appendChild(defaultOption);
+
+            STATE.defi_pairs.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.id;
+                option.textContent = p.name;
+                select.appendChild(option);
+            });
         }
     </script>
 </body>
