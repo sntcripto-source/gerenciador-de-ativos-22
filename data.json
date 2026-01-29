@@ -1,0 +1,67 @@
+{
+    "assets": [
+        {
+            "id": "6fb8d96d-06cc-48af-a772-99083b574f13",
+            "symbol": "ETH",
+            "name": "eth",
+            "type": "cripto",
+            "currency": "USD",
+            "currentPrice": 1000,
+            "createdAt": "2025-12-19T20:01:12.289Z"
+        },
+        {
+            "id": "49f2b923-97b8-42fd-9d43-0c7defc2ab42",
+            "symbol": "BTC",
+            "name": "Bitcoin",
+            "type": "cripto",
+            "currency": "USD",
+            "currentPrice": 10000,
+            "createdAt": "2025-12-19T20:06:22.560Z"
+        },
+        {
+            "id": "f5dfcf3a-06af-42bc-b258-21c6873ba831",
+            "symbol": "BTC",
+            "name": "Bitcoin Test",
+            "type": "cripto",
+            "currency": "USD",
+            "currentPrice": 50000,
+            "createdAt": "2025-12-19T20:26:25.538Z"
+        },
+        {
+            "id": "372cc9ac-450d-419f-af42-915a730b70ef",
+            "symbol": "BTC",
+            "name": "Bitcoin Test",
+            "type": "cripto",
+            "currency": "USD",
+            "currentPrice": 50000,
+            "createdAt": "2025-12-19T20:28:08.928Z"
+        },
+        {
+            "id": "90c02372-11ee-498d-8da3-0509308e8746",
+            "symbol": "0.1",
+            "name": "Bitcoin",
+            "type": "cripto",
+            "currency": "USD",
+            "currentPrice": 0.1,
+            "createdAt": "2026-01-29T17:27:26.041Z"
+        }
+    ],
+    "transactions": [
+        {
+            "id": "e385f6d7-7b9e-46fd-904e-0dcd3cd5a3a1",
+            "assetId": "49f2b923-97b8-42fd-9d43-0c7defc2ab42",
+            "type": "buy",
+            "quantity": 1,
+            "price": 48000,
+            "date": "2026-01-29",
+            "total": 48000
+        }
+    ],
+    "defi_pairs": [],
+    "defi_withdrawals": [],
+    "cash": 0,
+    "cashSource": "manual",
+    "cashAssetId": null,
+    "usdRate": 1,
+    "displayCurrency": "USD"
+}
