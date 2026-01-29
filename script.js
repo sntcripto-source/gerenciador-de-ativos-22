@@ -217,7 +217,7 @@ function initForms() {
             name: formData.get('name'),
             type: formData.get('type'),
             currency: 'USD', // FORCE USD
-            currentPrice: parseFloat(formData.get('current_price')),
+            currentPrice: 0,
             createdAt: new Date().toISOString()
         };
 
@@ -254,6 +254,13 @@ function initForms() {
         }
 
         STATE.transactions.push(newTrans);
+
+        // Update asset's current price to reflect latest transaction
+        const asset = STATE.assets.find(a => a.id === newTrans.assetId);
+        if (asset) {
+            asset.currentPrice = newTrans.price;
+        }
+
         saveState();
         closeModal();
         e.target.reset();
@@ -630,6 +637,12 @@ function importTransactions(rows, delimiter) {
             STATE.transactions[existingIndex] = trans;
         } else {
             STATE.transactions.push(trans);
+        }
+
+        // Update asset current price based on transaction (last in file wins)
+        const asset = STATE.assets.find(a => a.id === trans.assetId || a.symbol === trans.assetId); // Support both ID and Symbol if needed
+        if (asset) {
+            asset.currentPrice = trans.price;
         }
         count++;
     });

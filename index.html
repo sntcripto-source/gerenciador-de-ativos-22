@@ -868,16 +868,7 @@
                         <option value="outro">Outro</option>
                     </select>
                 </div>
-                <div class="form-group hidden">
-                    <label>Moeda</label>
-                    <select name="currency" id="asset-currency-select">
-                        <option value="USD" selected>Dólar Americano ($)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label id="price-label">Preço Atual ($) - Inicial</label>
-                    <input type="number" name="current_price" step="any" placeholder="0.00">
-                </div>
+
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Salvar</button>
                 </div>
@@ -1317,17 +1308,8 @@
                 const formData = new FormData(e.target);
                 const symbol = formData.get('symbol').trim().toUpperCase();
                 const name = formData.get('name').trim();
-                const currentPriceStr = formData.get('current_price');
-
-                // Manual Validation because 'required' can cause focus errors in hidden tabs/modals
-                if (!symbol || !name || !currentPriceStr) {
-                    alert("Por favor, preencha todos os campos obrigatórios (Símbolo, Nome e Preço Inicial).");
-                    return;
-                }
-
-                const currentPrice = parseFloat(currentPriceStr);
-                if (isNaN(currentPrice)) {
-                    alert("O preço deve ser um número válido.");
+                if (!symbol || !name) {
+                    alert("Por favor, preencha o Símbolo e o Nome.");
                     return;
                 }
 
@@ -1344,7 +1326,7 @@
                     name: name,
                     type: formData.get('type'),
                     currency: 'USD', // FORCE USD
-                    currentPrice: currentPrice,
+                    currentPrice: 0,
                     createdAt: new Date().toISOString()
                 };
 
