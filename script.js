@@ -447,37 +447,17 @@ function convertToDisplayCurrency(value, originalCurrency) {
 }
 
 // Export to Excel (CSV)
-function exportToExcel() {
-    // 1. Export Assets
-    const assetsHeader = ['ID', 'Simbolo', 'Nome', 'Tipo', 'Moeda', 'Preço Atual'];
-    const assetsRows = STATE.assets.map(a => [
-        a.id,
-        a.symbol,
-        a.name,
-        a.type,
-        a.currency,
-        a.currentPrice
-    ]);
-    downloadCSV('meus_ativos.csv', assetsHeader, assetsRows);
-
-    // 2. Export Transactions
-    // Delay second download slightly to ensure browser handles both
-    setTimeout(() => {
-        const transHeader = ['ID', 'Data', 'Ativo ID', 'Tipo', 'Quantidade', 'Preço Unit.', 'Total'];
-        const sortedTrans = [...STATE.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
-        const transRows = sortedTrans.map(t => {
-            return [
-                t.id,
-                t.date,
-                t.assetId,
-                t.type,
-                t.quantity,
-                t.price,
-                t.total
-            ];
-        });
-        downloadCSV('historico_transacoes.csv', transHeader, transRows);
-    }, 500);
+// 3. Export Summary (Cash)
+setTimeout(() => {
+    const stats = getPortfolioStats();
+    const summaryHeader = ['Descricao', 'Valor', 'Extra'];
+    const summaryRows = [
+        ['Saldo em Caixa', stats.cashDisplay, STATE.cashSource],
+        ['Fonte do Caixa', STATE.cashSource, STATE.cashAssetId || ''],
+        ['Patrimonio Total', stats.totalNetWorth, '']
+    ];
+    downloadCSV('resumo.csv', summaryHeader, summaryRows);
+}, 1000);
 }
 
 
@@ -528,9 +508,35 @@ function processCSVImport(csvContent) {
         importAssets(lines.slice(1), delimiter);
     } else if (header.includes('Ativo ID') && header.includes('Quantidade')) {
         importTransactions(lines.slice(1), delimiter);
+    } else if (header.includes('Descricao') && header.includes('Valor')) {
+        importSummary(lines.slice(1), delimiter);
     } else {
-        alert('Formato de arquivo não reconhecido. Verifique se o cabeçalho está correto (Simbolo, Moeda, etc).');
+        alert('Formato de arquivo não reconhecido. Verifique se o cabeçalho está correto (Simbolo, Moeda, Descricao, etc).');
     }
+}
+
+function importSummary(rows, delimiter) {
+    rows.forEach(row => {
+        const cols = row.split(delimiter);
+        if (cols.length < 2) return;
+
+        const description = cols[0].trim();
+        const valueStr = cols[1].trim();
+        const extra = cols[2] ? cols[2].trim() : '';
+
+        if (description === 'Saldo em Caixa') {
+            const value = parseLocaleNumber(valueStr, delimiter);
+            STATE.cash = value;
+            if (extra) STATE.cashSource = extra;
+        } else if (description === 'Fonte do Caixa') {
+            STATE.cashSource = valueStr;
+            STATE.cashAssetId = extra || null;
+        }
+    });
+
+    saveState();
+    renderAll();
+    alert('Resumo/Caixa importado com sucesso!');
 }
 
 
