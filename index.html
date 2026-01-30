@@ -1604,10 +1604,12 @@
 
         // Export to Excel (CSV)
         function exportToExcel() {
-            if (STATE.assets.length === 0 && STATE.transactions.length === 0) {
-                alert("Não há dados para exportar (Ativos ou Transações).");
+            if (STATE.assets.length === 0 && STATE.transactions.length === 0 && STATE.cash === 0 && (STATE.defi_pairs?.length || 0) === 0) {
+                alert("Não há dados para exportar.");
                 return;
             }
+
+            let delay = 0;
 
             // 1. Export Assets
             if (STATE.assets.length > 0) {
@@ -1621,29 +1623,66 @@
                     a.currentPrice
                 ]);
                 downloadCSV('meus_ativos.csv', assetsHeader, assetsRows);
+                delay += 1000;
             }
 
             // 2. Export Transactions
             if (STATE.transactions.length > 0) {
-                // Delay second download slightly to ensure browser handles both
                 setTimeout(() => {
                     const transHeader = ['ID', 'Data', 'Ativo ID', 'Tipo', 'Quantidade', 'Preço Unit.', 'Total'];
                     const sortedTrans = [...STATE.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
-                    const transRows = sortedTrans.map(t => {
-                        return [
-                            t.id,
-                            t.date,
-                            t.assetId,
-                            t.type,
-                            t.quantity,
-                            t.price,
-                            t.total
-                        ];
-                    });
+                    const transRows = sortedTrans.map(t => [
+                        t.id,
+                        t.date,
+                        t.assetId,
+                        t.type,
+                        t.quantity,
+                        t.price,
+                        t.total
+                    ]);
                     downloadCSV('historico_transacoes.csv', transHeader, transRows);
-                }, 1000); // 1 second delay to avoid browser blocking multiple downloads
-            } else if (STATE.assets.length > 0) {
-                console.log("Apenas ativos exportados, nenhuma transação encontrada.");
+                }, delay);
+                delay += 1000;
+            }
+
+            // 3. Export Cash Balance
+            setTimeout(() => {
+                const cashHeader = ['Descricao', 'Valor', 'Fonte', 'Ativo ID'];
+                const cashRows = [
+                    ['Saldo em Caixa', STATE.cash, STATE.cashSource, STATE.cashAssetId || '']
+                ];
+                downloadCSV('saldo_caixa.csv', cashHeader, cashRows);
+            }, delay);
+            delay += 1000;
+
+            // 4. Export DeFi Pairs
+            if (STATE.defi_pairs && STATE.defi_pairs.length > 0) {
+                setTimeout(() => {
+                    const defiHeader = ['ID', 'Nome', 'Valor Investido', 'Data'];
+                    const defiRows = STATE.defi_pairs.map(p => [
+                        p.id,
+                        p.name,
+                        p.amount,
+                        p.date
+                    ]);
+                    downloadCSV('defi_pares.csv', defiHeader, defiRows);
+                }, delay);
+                delay += 1000;
+            }
+
+            // 5. Export DeFi Withdrawals
+            if (STATE.defi_withdrawals && STATE.defi_withdrawals.length > 0) {
+                setTimeout(() => {
+                    const withdrawalHeader = ['ID', 'Data', 'Par ID', 'Valor', 'Notas'];
+                    const withdrawalRows = STATE.defi_withdrawals.map(w => [
+                        w.id,
+                        w.date,
+                        w.pair_id,
+                        w.amount,
+                        w.notes
+                    ]);
+                    downloadCSV('defi_saques.csv', withdrawalHeader, withdrawalRows);
+                }, delay);
             }
         }
 
