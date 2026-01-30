@@ -1727,16 +1727,109 @@
             const header = firstLine.split(delimiter).map(h => h.trim());
 
             // Identify type based on header columns
-            // Assets Header: 'ID', 'Simbolo', 'Nome', 'Tipo', 'Moeda', 'Preço Atual'
-            // Transactions Header: 'ID', 'Data', 'Ativo ID', 'Tipo', 'Quantidade', 'Preço Unit.', 'Total'
-
             if (header.includes('Simbolo') && header.includes('Moeda')) {
                 importAssets(lines.slice(1), delimiter);
             } else if (header.includes('Ativo ID') && header.includes('Quantidade')) {
                 importTransactions(lines.slice(1), delimiter);
+            } else if (header.includes('Descricao') && (header.includes('Valor') || header.includes('Saldo'))) {
+                importCash(lines.slice(1), delimiter);
+            } else if (header.includes('Nome') && header.includes('Valor Investido')) {
+                importDeFiPairs(lines.slice(1), delimiter);
+            } else if (header.includes('Par ID') && header.includes('Notas')) {
+                importDeFiWithdrawals(lines.slice(1), delimiter);
             } else {
-                alert('Formato de arquivo não reconhecido. Verifique se o cabeçalho está correto (Simbolo, Moeda, etc).');
+                alert('Formato de arquivo não reconhecido. Verifique se o cabeçalho está correto (Simbolo, Ativo ID, Descricao, Nome, etc).');
             }
+        }
+
+        function importCash(rows, delimiter) {
+            rows.forEach(row => {
+                const cols = row.split(delimiter);
+                if (cols.length < 2) return;
+
+                const description = cols[0].trim();
+                const valueStr = cols[1].trim();
+                const source = cols[2] ? cols[2].trim() : 'manual';
+                const assetId = cols[3] ? cols[3].trim() : null;
+
+                if (description === 'Saldo em Caixa') {
+                    STATE.cash = parseLocaleNumber(valueStr, delimiter);
+                    STATE.cashSource = source;
+                    STATE.cashAssetId = assetId;
+                }
+            });
+
+            saveState();
+            renderAll();
+            alert('Saldo em caixa importado com sucesso!');
+        }
+
+        function importDeFiPairs(rows, delimiter) {
+            let count = 0;
+            rows.forEach(row => {
+                const cols = row.split(delimiter);
+                if (cols.length < 4) return;
+
+                const id = cols[0].trim() || Date.now() + Math.random();
+                const name = cols[1].trim();
+                const amount = parseLocaleNumber(cols[2], delimiter);
+                const date = cols[3].trim();
+
+                if (!name) return;
+
+                const pair = {
+                    id: parseFloat(id),
+                    name: name,
+                    amount: amount,
+                    date: date
+                };
+
+                const existingIndex = STATE.defi_pairs.findIndex(p => p.id === pair.id);
+                if (existingIndex >= 0) {
+                    STATE.defi_pairs[existingIndex] = pair;
+                } else {
+                    STATE.defi_pairs.push(pair);
+                }
+                count++;
+            });
+
+            saveState();
+            renderAll();
+            alert(`${count} Pares DeFi importados/atualizados com sucesso!`);
+        }
+
+        function importDeFiWithdrawals(rows, delimiter) {
+            let count = 0;
+            rows.forEach(row => {
+                const cols = row.split(delimiter);
+                if (cols.length < 5) return;
+
+                const id = cols[0].trim() || Date.now() + Math.random();
+                const date = cols[1].trim();
+                const pairId = cols[2].trim();
+                const amount = parseLocaleNumber(cols[3], delimiter);
+                const notes = cols[4].trim();
+
+                const withdrawal = {
+                    id: parseFloat(id),
+                    date: date,
+                    pair_id: pairId,
+                    amount: amount,
+                    notes: notes
+                };
+
+                const existingIndex = STATE.defi_withdrawals.findIndex(w => w.id === withdrawal.id);
+                if (existingIndex >= 0) {
+                    STATE.defi_withdrawals[existingIndex] = withdrawal;
+                } else {
+                    STATE.defi_withdrawals.push(withdrawal);
+                }
+                count++;
+            });
+
+            saveState();
+            renderAll();
+            alert(`${count} Saques DeFi importados/atualizados com sucesso!`);
         }
 
 

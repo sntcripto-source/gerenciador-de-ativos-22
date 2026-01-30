@@ -447,17 +447,59 @@ function convertToDisplayCurrency(value, originalCurrency) {
 }
 
 // Export to Excel (CSV)
-// 3. Export Summary (Cash)
-setTimeout(() => {
-    const stats = getPortfolioStats();
-    const summaryHeader = ['Descricao', 'Valor', 'Extra'];
-    const summaryRows = [
-        ['Saldo em Caixa', stats.cashDisplay, STATE.cashSource],
-        ['Fonte do Caixa', STATE.cashSource, STATE.cashAssetId || ''],
-        ['Patrimonio Total', stats.totalNetWorth, '']
-    ];
-    downloadCSV('resumo.csv', summaryHeader, summaryRows);
-}, 1000);
+function exportToExcel() {
+    if (STATE.assets.length === 0 && STATE.transactions.length === 0 && STATE.cash === 0) {
+        alert("Não há dados para exportar.");
+        return;
+    }
+
+    let delay = 0;
+
+    // 1. Export Assets
+    if (STATE.assets.length > 0) {
+        const assetsHeader = ['ID', 'Simbolo', 'Nome', 'Tipo', 'Moeda', 'Preço Atual'];
+        const assetsRows = STATE.assets.map(a => [
+            a.id,
+            a.symbol,
+            a.name,
+            a.type,
+            a.currency,
+            a.currentPrice
+        ]);
+        downloadCSV('meus_ativos.csv', assetsHeader, assetsRows);
+        delay += 1000;
+    }
+
+    // 2. Export Transactions
+    if (STATE.transactions.length > 0) {
+        setTimeout(() => {
+            const transHeader = ['ID', 'Data', 'Ativo ID', 'Tipo', 'Quantidade', 'Preço Unit.', 'Total'];
+            const sortedTrans = [...STATE.transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const transRows = sortedTrans.map(t => [
+                t.id,
+                t.date,
+                t.assetId,
+                t.type,
+                t.quantity,
+                t.price,
+                t.total
+            ]);
+            downloadCSV('historico_transacoes.csv', transHeader, transRows);
+        }, delay);
+        delay += 1000;
+    }
+
+    // 3. Export Summary (Cash)
+    setTimeout(() => {
+        const stats = getPortfolioStats();
+        const summaryHeader = ['Descricao', 'Valor', 'Extra'];
+        const summaryRows = [
+            ['Saldo em Caixa', stats.cashDisplay, STATE.cashSource],
+            ['Fonte do Caixa', STATE.cashSource, STATE.cashAssetId || ''],
+            ['Patrimonio Total', stats.totalNetWorth, '']
+        ];
+        downloadCSV('resumo.csv', summaryHeader, summaryRows);
+    }, delay);
 }
 
 
